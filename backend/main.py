@@ -23,6 +23,12 @@ from pydantic import BaseModel, Field
 load_dotenv()
 
 app = FastAPI(title="Website Health Engine", version="2.0.0")
+@app.get("/")
+async def root():
+    return {
+        "status" : "running",
+        "message": "Website Health Engine",
+        "version" : "2.0.0"
 
 app.add_middleware(
     CORSMiddleware,
