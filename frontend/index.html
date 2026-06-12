@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AuditFlow — Website Health Engine</title>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --surface: #111118; --card: #16161f;
+    --border: rgba(255,255,255,0.07); --border-bright: rgba(255,255,255,0.14);
+    --text: #f0f0f5; --text-muted: #8585a0; --text-dim: #4a4a60;
+    --accent: #6c63ff; --accent-dim: rgba(108,99,255,0.15);
+    --green: #22c55e; --green-dim: rgba(34,197,94,0.12);
+    --amber: #f59e0b; --amber-dim: rgba(245,158,11,0.12);
+    --red: #ef4444; --red-dim: rgba(239,68,68,0.12);
+    --blue: #3b82f6; --blue-dim: rgba(59,130,246,0.12);
+    --mono: 'JetBrains Mono', monospace; --sans: 'Inter', system-ui, sans-serif;
+    --r: 10px; --r-lg: 16px;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; }
+  #root { position: relative; z-index: 1; }
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 18px 48px; border-bottom: 1px solid var(--border); background: rgba(10,10,15,0.85); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -0.3px; }
+  .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .badge { font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 20px; background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(108,99,255,0.25); font-family: var(--mono); }
+  .hero { max-width: 720px; margin: 80px auto 60px; text-align: center; padding: 0 24px; }
+  .hero-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .hero-eyebrow::before, .hero-eyebrow::after { content: ''; flex: 1; max-width: 40px; height: 1px; background: var(--accent); opacity: 0.4; }
+  h1 { font-size: 52px; font-weight: 700; line-height: 1.1; letter-spacing: -1.5px; margin-bottom: 20px; background: linear-gradient(135deg, #fff 40%, #8585a0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { font-size: 17px; color: var(--text-muted); max-width: 500px; margin: 0 auto 40px; line-height: 1.7; }
+  .audit-form { display: flex; flex-direction: column; gap: 12px; max-width: 600px; margin: 0 auto; }
+  .url-row { display: flex; gap: 10px; background: var(--card); border: 1px solid var(--border-bright); border-radius: var(--r-lg); padding: 6px 6px 6px 16px; transition: border-color 0.2s; }
+  .url-row:focus-within { border-color: var(--accent); }
+  .url-row input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-family: var(--mono); font-size: 14px; }
+  .url-row input::placeholder { color: var(--text-dim); }
+  .audit-btn { padding: 10px 24px; border-radius: 10px; background: var(--accent); color: #fff; border: none; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.15s, transform 0.1s; white-space: nowrap; }
+  .audit-btn:hover { opacity: 0.88; }
+  .audit-btn:active { transform: scale(0.97); }
+  .audit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .context-row { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-muted); }
+  .context-row input { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.2s; }
+  .context-row input:focus { border-color: var(--accent); }
+  .loading { text-align: center; padding: 80px 24px; max-width: 500px; margin: 0 auto; }
+  .loader-ring { width: 56px; height: 56px; margin: 0 auto 24px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-steps { list-style: none; text-align: left; display: inline-flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+  .loading-steps li { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted); }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-bright); flex-shrink: 0; }
+  .step-dot.active { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+  .step-dot.done { background: var(--green); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .report { max-width: 1100px; margin: 0 auto 80px; padding: 0 24px; }
+  .grade-card { display: flex; align-items: center; gap: 32px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 32px 40px; margin-bottom: 24px; overflow: hidden; position: relative; }
+  .grade-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent-color, var(--accent)); }
+  .grade-letter { font-size: 72px; font-weight: 700; line-height: 1; font-family: var(--mono); color: var(--grade-color, var(--accent)); }
+  .grade-meta { flex: 1; }
+  .grade-url { font-family: var(--mono); font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+  .overall-score { font-size: 36px; font-weight: 700; letter-spacing: -1px; }
+  .overall-label { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .projection-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+  .projection-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px; }
+  .projection-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 8px; }
+  .projection-value { font-size: 24px; font-family: var(--mono); font-weight: 700; letter-spacing: -0.5px; }
+  .projection-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .score-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .score-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 20px 24px; position: relative; overflow: hidden; }
+  .score-card-label { font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+  .score-num { font-size: 32px; font-weight: 700; font-family: var(--mono); letter-spacing: -1px; }
+  .score-bar-track { height: 4px; background: var(--border); border-radius: 2px; margin-top: 14px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1); }
+  .score-weight { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .section-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; }
+  .section-title { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .section-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .data-rows { display: flex; flex-direction: column; gap: 2px; }
+  .data-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .data-row:last-child { border-bottom: none; }
+  .data-row-key { color: var(--text-muted); }
+  .data-row-val { font-family: var(--mono); font-size: 12px; font-weight: 500; max-width: 200px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; font-family: var(--mono); }
+  .pill-green { background: var(--green-dim); color: var(--green); }
+  .pill-red { background: var(--red-dim); color: var(--red); }
+  .pill-amber { background: var(--amber-dim); color: var(--amber); }
+  .pill-blue { background: var(--blue-dim); color: var(--blue); }
+  .pill-accent { background: var(--accent-dim); color: var(--accent); }
+  .issue-list { display: flex; flex-direction: column; gap: 8px; }
+  .issue-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.4; }
+  .issue-critical { background: var(--red-dim); color: #fca5a5; }
+  .issue-warning { background: var(--amber-dim); color: #fcd34d; }
+  .issue-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .rec-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; margin-bottom: 12px; position: relative; }
+  .rec-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .rec-title { font-weight: 600; font-size: 14px; }
+  .rec-badges { display: flex; gap: 6px; flex-shrink: 0; }
+  .rec-detail { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  .rec-metric { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--accent); font-family: var(--mono); display: flex; align-items: center; gap: 6px; }
+  .fix-plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fix-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; }
+  .fix-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .fix-title { font-weight: 600; font-size: 14px; line-height: 1.35; }
+  .fix-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .fix-list { margin: 10px 0 0 16px; display: flex; flex-direction: column; gap: 4px; color: var(--text-muted); font-size: 13px; }
+  .fix-foot { margin-top: 10px; font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
+  .code-box { margin-top: 10px; background: #0a0a0f; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: var(--mono); font-size: 11px; color: #d4d4dd; white-space: pre-wrap; overflow-x: auto; }
+  .roadmap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .roadmap-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px; }
+  .roadmap-card h4 { font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; color: var(--text-muted); }
+  .roadmap-card ul { margin-left: 16px; display: flex; flex-direction: column; gap: 6px; color: var(--text-muted); font-size: 13px; }
+  .tips-list { display: flex; flex-direction: column; gap: 8px; }
+  .tip-item { padding: 10px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); font-size: 13px; color: var(--text-muted); }
+  .scope-note { margin-top: 16px; padding: 12px 14px; border-radius: 10px; background: var(--blue-dim); color: #93c5fd; border: 1px solid rgba(59,130,246,0.28); font-size: 13px; }
+  .quick-grid { display: flex; flex-direction: column; gap: 6px; }
+  .quick-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--green-dim); border-radius: 7px; font-size: 13px; color: #86efac; }
+  .error-card { max-width: 500px; margin: 40px auto; background: var(--red-dim); border: 1px solid rgba(239,68,68,0.2); border-radius: var(--r-lg); padding: 24px; text-align: center; }
+  .error-card h3 { color: var(--red); margin-bottom: 8px; }
+  .error-card p { color: #fca5a5; font-size: 14px; }
+  .reset-btn { padding: 8px 20px; border-radius: 8px; background: transparent; border: 1px solid var(--border-bright); color: var(--text-muted); font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .heading-tag { display: inline-block; padding: 2px 8px; border-radius: 5px; font-family: var(--mono); font-size: 11px; font-weight: 600; background: var(--accent-dim); color: var(--accent); margin-right: 6px; }
+  .formula-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 18px; font-family: var(--mono); font-size: 13px; color: var(--text-muted); margin-bottom: 20px; text-align: center; }
+  .formula-box span { color: var(--accent); }
+  .sandbox-banner { background: #f59e0b; color: #0a0a0f; padding: 6px; text-align: center; font-size: 12px; font-weight: 600; }
+  @media (max-width: 768px) { nav { padding: 14px 20px; } h1 { font-size: 36px; } .score-row { grid-template-columns: 1fr; } .report-grid { grid-template-columns: 1fr; } .grade-card { flex-direction: column; align-items: flex-start; gap: 16px; } .projection-grid { grid-template-columns: 1fr 1fr; } .fix-plan-grid, .roadmap-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef } = React;
+
+const API_BASE = "http://localhost:8000";
+
+// DEMO_DATA removed — hardcoded fallback was causing every URL to show identical GitHub results.
+// The app now shows a proper error when the backend is unreachable.
+
+function gradeColor(g) { return g === "A" ? "#22c55e" : g === "B" ? "#6c63ff" : g === "C" ? "#f59e0b" : "#ef4444"; }
+function scoreColor(n) { return n >= 85 ? "#22c55e" : n >= 65 ? "#6c63ff" : n >= 45 ? "#f59e0b" : "#ef4444"; }
+function severityPill(severity) { return severity === "critical" ? "pill-red" : severity === "high" ? "pill-amber" : severity === "medium" ? "pill-blue" : "pill-green"; }
+
+function ScoreBar({ value }) {
+  return (
+    <div className="score-bar-track">
+      <div className="score-bar-fill" style={{ width: `${value}%`, background: scoreColor(value) }} />
+    </div>
+  );
+}
+
+function DataRow({ label, value, pill }) {
+  return (
+    <div className="data-row">
+      <span className="data-row-key">{label}</span>
+      {pill ? <span className={`pill ${pill}`}>{value}</span> : <span className="data-row-val">{value}</span>}
+    </div>
+  );
+}
+
+function HeadingList({ tags, level }) {
+  if (!tags || tags.length === 0) return <span style={{ color: "var(--text-dim)" }}>None</span>;
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {tags.map((t, i) => <span key={i} className="heading-tag">{level}{i + 1}</span>)}
+    </div>
+  );
+}
+
+function Report({ data, onReset }) {
+  const g = data?.scores?.grade || "F";
+  const gc = gradeColor(g);
+  const seo = data.seo || {};
+  const perf = data.performance || {};
+  const usab = data.usability || {};
+  const fixPlan = Array.isArray(data.fix_plan) ? data.fix_plan : [];
+  const tips = Array.isArray(data.developer_tips) ? data.developer_tips : [];
+  const checklist = Array.isArray(data.execution_checklist) ? data.execution_checklist : [];
+  const roadmap = data.improvement_roadmap || {};
+  const projection = data.score_projection || null;
+  const analysis = data.analysis_summary || {};
+
+  return (
+    <div className="report">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "20px 0" }}>
+        <div style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "var(--mono)" }}>Audited {new Date(data.scraped_at).toLocaleString()}</div>
+        <button className="reset-btn" onClick={onReset}>← New audit</button>
+      </div>
+
+      <div className="formula-box">Health Score = (<span>SEO × 0.4</span>) + (<span>Performance × 0.4</span>) + (<span>Usability × 0.2</span>)</div>
+
+      <div className="grade-card" style={{ "--accent-color": gc }}>
+        <div className="grade-letter" style={{ color: gc }}>{g}</div>
+        <div className="grade-meta">
+          <div className="grade-url">{data.url}</div>
+          <div className="overall-score" style={{ color: gc }}>{data.scores.overall_score}<span style={{ fontSize: 20, color: "var(--text-muted)" }}>/100</span></div>
+          <div className="overall-label">Overall engine configuration evaluation</div>
+        </div>
+      </div>
+
+      {projection && (
+        <div className="projection-grid">
+          <div className="projection-card">
+            <div className="projection-title">Projected Overall</div>
+            <div className="projection-value" style={{ color: scoreColor(projection.projected_overall_score) }}>{projection.projected_overall_score}</div>
+            <div className="projection-sub">Grade {projection.projected_grade}</div>
+          </div>
+          <div className="projection-card">
+            <div className="projection-title">Projected SEO</div>
+            <div className="projection-value" style={{ color: scoreColor(projection.projected_seo_score) }}>{projection.projected_seo_score}</div>
+          </div>
+          <div className="projection-card">
+            <div className="projection-title">Projected Performance</div>
+            <div className="projection-value" style={{ color: scoreColor(projection.projected_performance_score) }}>{projection.projected_performance_score}</div>
+          </div>
+          <div className="projection-card">
+            <div className="projection-title">Projected Usability</div>
+            <div className="projection-value" style={{ color: scoreColor(projection.projected_usability_score) }}>{projection.projected_usability_score}</div>
+          </div>
+        </div>
+      )}
+
+      <div className="score-row">
+        {[{ label: "SEO Score", val: data.scores.seo_score, w: "40% weight" }, { label: "Performance", val: data.scores.performance_score, w: "40% weight" }, { label: "Usability", val: data.scores.usability_score, w: "20% weight" }].map(s => (
+          <div key={s.label} className="score-card">
+            <div className="score-card-label">{s.label}</div>
+            <div className="score-num" style={{ color: scoreColor(s.val) }}>{s.val}</div>
+            <ScoreBar value={s.val} />
+            <div className="score-weight">{s.w}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="report-grid">
+        <div className="section-card">
+          <div className="section-title">
+            <div className="section-icon" style={{ background: "rgba(34,197,94,0.12)" }}>🔍</div>
+            SEO Telemetry
+          </div>
+          <div className="data-rows">
+            <DataRow label="Title" value={seo.title || "—"} />
+            <DataRow label="Title Length" value={seo.title_length ?? "—"} />
+            <DataRow label="Meta Description" value={seo.meta_description ? (seo.meta_description.length > 40 ? seo.meta_description.slice(0, 40) + "…" : seo.meta_description) : "—"} />
+            <DataRow label="Meta Desc Length" value={seo.meta_desc_length ?? "—"} />
+            <DataRow label="H1 Tags" value={<HeadingList tags={seo.h1_tags} level="H1" />} />
+            <DataRow label="H2 Tags" value={<HeadingList tags={seo.h2_tags} level="H2" />} />
+            <DataRow label="H3 Tags" value={<HeadingList tags={seo.h3_tags} level="H3" />} />
+            <DataRow label="Canonical URL" value={seo.canonical_url || "—"} />
+            <DataRow label="Structured Data" value={seo.structured_data ? "Yes" : "No"} pill={seo.structured_data ? "pill-green" : "pill-amber"} />
+            <DataRow label="Lang Attribute" value={seo.has_lang_attr ? "Yes" : "No"} pill={seo.has_lang_attr ? "pill-green" : "pill-amber"} />
+            <DataRow label="Robots Indexable" value={seo.meta_robots_indexable === false ? "No" : "Yes"} pill={seo.meta_robots_indexable === false ? "pill-red" : "pill-green"} />
+            <DataRow label="Word Count" value={seo.word_count ?? "—"} />
+            <DataRow label="Internal Links" value={seo.internal_links ?? "—"} />
+            <DataRow label="External Links" value={seo.external_links ?? "—"} />
+            <DataRow label="Alt Missing" value={seo.alt_missing_images ?? 0} pill={(seo.alt_missing_images || 0) > 0 ? "pill-red" : "pill-green"} />
+          </div>
+        </div>
+        <div className="section-card">
+          <div className="section-title">
+            <div className="section-icon" style={{ background: "rgba(59,130,246,0.12)" }}>⚡</div>
+            Performance Metrics
+          </div>
+          <div className="data-rows">
+            <DataRow label="Load Time" value={`${perf.load_time_ms ?? "—"} ms`} />
+            <DataRow label="Page Size" value={`${perf.page_size_kb ?? "—"} KB`} />
+            <DataRow label="Total Images" value={perf.total_images ?? "—"} />
+            <DataRow label="Lazy Images" value={perf.lazy_images ?? 0} />
+            <DataRow label="Scripts" value={perf.scripts_count ?? "—"} pill={(perf.scripts_count || 0) > 15 ? "pill-red" : (perf.scripts_count || 0) > 10 ? "pill-amber" : "pill-green"} />
+            <DataRow label="3P Scripts" value={perf.third_party_scripts ?? 0} pill={(perf.third_party_scripts || 0) > 6 ? "pill-red" : (perf.third_party_scripts || 0) > 3 ? "pill-amber" : "pill-green"} />
+            <DataRow label="Blocking Head Scripts" value={perf.blocking_scripts_head ?? 0} pill={(perf.blocking_scripts_head || 0) > 0 ? "pill-red" : "pill-green"} />
+            <DataRow label="Preconnect Hints" value={perf.preconnect_hints ?? 0} />
+            <DataRow label="Viewport Meta" value={perf.has_viewport_meta ? "Yes" : "No"} pill={perf.has_viewport_meta ? "pill-green" : "pill-red"} />
+            <DataRow label="HTTPS" value={perf.has_https ? "Yes" : "No"} pill={perf.has_https ? "pill-green" : "pill-red"} />
+            <DataRow label="Server Response" value={`${perf.server_response_ms ?? "—"} ms`} />
+          </div>
+        </div>
+      </div>
+
+      <div className="report-grid">
+        <div className="section-card">
+          <div className="section-title">
+            <div className="section-icon" style={{ background: "rgba(108,99,255,0.12)" }}>🧭</div>
+            Usability Signals
+          </div>
+          <div className="data-rows">
+            <DataRow label="Favicon" value={usab.has_favicon ? "Present" : "Missing"} pill={usab.has_favicon ? "pill-green" : "pill-amber"} />
+            <DataRow label="Search" value={usab.has_search ? "Yes" : "No"} pill={usab.has_search ? "pill-green" : "pill-amber"} />
+            <DataRow label="Contact Info" value={usab.has_contact_info ? "Yes" : "No"} pill={usab.has_contact_info ? "pill-green" : "pill-amber"} />
+            <DataRow label="Mobile Friendly" value={usab.mobile_friendly ? "Yes" : "No"} pill={usab.mobile_friendly ? "pill-green" : "pill-red"} />
+            <DataRow label="CTA Detected" value={usab.has_cta ? "Yes" : "No"} pill={usab.has_cta ? "pill-green" : "pill-amber"} />
+            <DataRow label="Nav Links" value={usab.nav_links ?? "—"} />
+            <DataRow label="Footer" value={usab.footer_present ? "Present" : "Missing"} pill={usab.footer_present ? "pill-green" : "pill-amber"} />
+            <DataRow label="Forms" value={usab.form_count ?? "—"} />
+            <DataRow label="Missing Labels" value={usab.missing_form_labels ?? 0} pill={(usab.missing_form_labels || 0) > 0 ? "pill-red" : "pill-green"} />
+            <DataRow label="Landmarks" value={usab.aria_landmarks ?? 0} />
+            <DataRow label="Buttons" value={usab.button_count ?? 0} />
+          </div>
+        </div>
+        <div className="section-card">
+          <div className="section-title">
+            <div className="section-icon" style={{ background: "rgba(245,158,11,0.12)" }}>🚨</div>
+            Issues & Gaps
+          </div>
+          <div className="issue-list">
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>Critical Issues</div>
+            {(data.critical_issues || []).length > 0 ? (data.critical_issues || []).map((c, i) => (
+              <div key={i} className="issue-item issue-critical">
+                <div className="issue-dot" style={{ background: "var(--red)" }} />
+                {c}
+              </div>
+            )) : <div style={{ fontSize: 13, color: "var(--text-dim)", marginBottom: 14 }}>No critical issues detected.</div>}
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", margin: "14px 0 10px", textTransform: "uppercase", letterSpacing: 0.8 }}>Quick Wins</div>
+            {(data.quick_wins || []).length > 0 ? (data.quick_wins || []).map((q, i) => (
+              <div key={i} className="issue-item issue-warning">
+                <div className="issue-dot" style={{ background: "var(--amber)" }} />
+                {q}
+              </div>
+            )) : <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No quick wins flagged.</div>}
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", margin: "14px 0 10px", textTransform: "uppercase", letterSpacing: 0.8 }}>All Gaps</div>
+            {(data.raw_gaps || []).length > 0 ? (data.raw_gaps || []).map((r, i) => (
+              <div key={i} className="issue-item" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
+                <div className="issue-dot" style={{ background: "var(--text-dim)" }} />
+                {r}
+              </div>
+            )) : <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No gaps found.</div>}
+          </div>
+        </div>
+      </div>
+
+      <div className="full-section" style={{ marginTop: 16 }}>
+        <div className="section-card">
+          <div className="section-title">📌 Analysis Snapshot</div>
+          <div className="tip-item" style={{ marginBottom: 10 }}>{analysis.summary || "No summary available."}</div>
+          <div className="report-grid" style={{ marginBottom: 0 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.8 }}>Strengths</div>
+              {(analysis.strengths || []).length > 0 ? (
+                <div className="tips-list">
+                  {(analysis.strengths || []).map((item, i) => <div key={i} className="tip-item">{item}</div>)}
+                </div>
+              ) : <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No strengths listed.</div>}
+            </div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.8 }}>Key Risks</div>
+              {(analysis.risks || []).length > 0 ? (
+                <div className="tips-list">
+                  {(analysis.risks || []).map((item, i) => <div key={i} className="tip-item">{item}</div>)}
+                </div>
+              ) : <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No immediate risks listed.</div>}
+            </div>
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", margin: "12px 0 8px", textTransform: "uppercase", letterSpacing: 0.8 }}>Next Focus</div>
+          {(analysis.next_focus || []).length > 0 ? (
+            <div className="tips-list">
+              {(analysis.next_focus || []).map((item, i) => <div key={i} className="tip-item">{item}</div>)}
+            </div>
+          ) : <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No focus items listed.</div>}
+        </div>
+      </div>
+
+      <div className="full-section" style={{ marginTop: 16 }}>
+        <div className="section-card">
+          <div className="section-title">🧩 Execution Checklist <span className="pill pill-accent" style={{ marginLeft: "auto" }}>{checklist.length} tasks</span></div>
+          {checklist.length > 0 ? checklist.map((item, i) => (
+            <div key={i} className="issue-item" style={{ background: "var(--surface)", color: "var(--text-muted)", marginBottom: 8 }}>
+              <div className="issue-dot" style={{ background: "var(--accent)" }} />
+              {item}
+            </div>
+          )) : <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No checklist generated.</div>}
+        </div>
+      </div>
+
+      <div className="full-section" style={{ marginTop: 16 }}>
+        <div className="section-card">
+          <div className="section-title">🛠️ Developer Fix Plan <span className="pill pill-accent" style={{ marginLeft: "auto" }}>{fixPlan.length} items</span></div>
+          {fixPlan.length > 0 ? (
+            <div className="fix-plan-grid">
+              {fixPlan.slice(0, 8).map((item, i) => (
+                <div key={i} className="fix-item">
+                  <div className="fix-head">
+                    <div className="fix-title">{item.issue}</div>
+                    <span className="pill pill-accent">P{item.priority_score || 0}</span>
+                  </div>
+                  <div className="fix-meta">
+                    <span className={`pill ${severityPill(item.severity)}`}>{String(item.severity || "low").toUpperCase()}</span>
+                    <span className="pill pill-blue">{item.category || "general"}</span>
+                    <span className="pill pill-green">{item.effort || "low"}</span>
+                  </div>
+                  <div className="rec-detail">{item.why_it_matters || "No context provided."}</div>
+                  {(item.how_to_fix || []).length > 0 && (
+                    <ol className="fix-list">
+                      {(item.how_to_fix || []).slice(0, 3).map((step, idx) => <li key={idx}>{step}</li>)}
+                    </ol>
+                  )}
+                  <div className="fix-foot">Owner: {item.owner || "frontend"} · KPI: {item.kpi_target || "Overall Health Score"} · +{item.estimated_score_gain || 0} pts</div>
+                  {item.code_example?.snippet && (
+                    <pre className="code-box"><code>{item.code_example.snippet}</code></pre>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No fix plan generated.</div>}
+        </div>
+      </div>
+
+      <div className="full-section" style={{ marginTop: 16 }}>
+        <div className="section-card">
+          <div className="section-title">✨ AI Optimization Blueprint <span className="pill pill-accent" style={{ marginLeft: "auto" }}>OpenAI Engine</span></div>
+          {(data.ai_recommendations || []).length > 0 ? data.ai_recommendations.map((r, i) => (
+            <div key={i} className="rec-card">
+              <div className="rec-header">
+                <div className="rec-title">{r.title}</div>
+                <div className="rec-badges"><span className="pill pill-red">{r.impact}</span><span className="pill pill-green">{r.effort}</span></div>
+              </div>
+              <div className="rec-detail">{r.detail}</div>
+              {r.metric && <div className="rec-metric">↗ Target Conversion Indicator: {r.metric}</div>}
+            </div>
+          )) : <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No AI recommendations generated.</div>}
+        </div>
+      </div>
+
+      <div className="report-grid" style={{ marginTop: 16 }}>
+        <div className="section-card">
+          <div className="section-title">🚀 Delivery Roadmap</div>
+          <div className="roadmap-grid">
+            {[{ title: "Immediate", items: roadmap.immediate || [] }, { title: "Sprint", items: roadmap.sprint || [] }, { title: "Backlog", items: roadmap.backlog || [] }].map((col, idx) => (
+              <div key={idx} className="roadmap-card">
+                <h4>{col.title}</h4>
+                {col.items.length > 0 ? <ul>{col.items.map((x, i) => <li key={i}>{x}</li>)}</ul> : <div style={{ fontSize: 12, color: "var(--text-dim)" }}>No items</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="section-card">
+          <div className="section-title">🧠 Developer Tips</div>
+          <div className="tips-list">
+            {tips.length > 0 ? tips.map((tip, i) => <div key={i} className="tip-item">{tip}</div>) : <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No tips generated.</div>}
+          </div>
+        </div>
+      </div>
+
+      {data.automation_scope && <div className="scope-note">{data.automation_scope}</div>}
+    </div>
+  );
+}
+
+const LOADING_STEPS = ["Targeting endpoint...", "Compiling syntax data...", "Parsing DOM signals...", "Evaluating score metrics...", "Generating LLM strategy mappings..."];
+
+function App() {
+  const [url, setUrl] = useState(""); const [context, setContext] = useState("SaaS platform");
+  const [status, setStatus] = useState("idle"); const [loadStep, setLoadStep] = useState(0);
+  const [data, setData] = useState(null); const [isSandbox, setIsSandbox] = useState(false);
+  const [error, setError] = useState(""); const [skipAi, setSkipAi] = useState(false);
+  const stepRef = useRef(null);
+
+  const runAudit = async (target) => {
+    const targetUrl = target || url; if (!targetUrl.trim()) return;
+    setStatus("loading"); setLoadStep(0); setError(""); setIsSandbox(false);
+    console.log('Starting audit for', targetUrl);
+
+    stepRef.current = setInterval(() => { setLoadStep(s => Math.min(s + 1, LOADING_STEPS.length - 1)); }, 2500);
+
+    try {
+      const res = await fetch(`${API_BASE}/audit`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: targetUrl.trim(), business_context: context, skip_ai: skipAi })
+      });
+      clearInterval(stepRef.current);
+      if (!res.ok) throw new Error("Internal audit evaluation runtime failure.");
+      const json = await res.json();
+      setData(json); setStatus("done");
+    } catch (e) {
+      // Primary call failed — try a few alternate localhost addresses before falling back
+      clearInterval(stepRef.current);
+      const addresses = [API_BASE, "http://127.0.0.1:8000", "http://[::1]:8000"].filter((v,i,a)=>a.indexOf(v)===i);
+      let succeeded = false; let lastErr = null;
+      for (const base of addresses) {
+        try {
+          console.log('Trying backend at', base);
+          const r = await fetch(`${base}/audit`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: targetUrl.trim(), business_context: context, skip_ai: skipAi }),
+          });
+          if (!r.ok) { lastErr = new Error(`Status ${r.status}`); console.error('Backend returned status', r.status); continue; }
+          const json2 = await r.json();
+          console.log('Received response from', base, json2);
+          setData(json2); setStatus("done"); setIsSandbox(false);
+          succeeded = true; break;
+        } catch (err2) {
+          console.error('Error calling', base, err2);
+          lastErr = err2;
+        }
+      }
+
+      if (!succeeded) {
+        const msg = lastErr ? String(lastErr) : "Audit engine unreachable";
+        console.error('Audit failed:', msg);
+        setError(msg);
+        setStatus("error");
+      }
+    }
+  };
+
+  if (status === "done" && data) return <><nav><div className="logo"><div className="logo-icon">⬡</div>AuditFlow</div><span className="badge">v1.1 Core</span></nav><Report data={data} onReset={() => { setStatus("idle"); setUrl(""); setData(null); setError(""); }} /></>;
+
+  return (
+    <><nav><div className="logo"><div className="logo-icon">⬡</div>AuditFlow</div><span className="badge">v1.1 Core</span></nav>
+      {status === "idle" && (
+        <div className="hero">
+          <div className="hero-eyebrow">Enterprise Data Automation</div>
+          <h1>Audit. Score. Fix.</h1>
+          <div className="audit-form">
+            <div className="url-row">
+              <input
+                type="url"
+                aria-label="Website URL to audit"
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") runAudit(); }}
+                placeholder="https://targetdomain.com"
+              />
+              <button className="audit-btn" onClick={() => runAudit()} disabled={!url.trim()}>Launch Engine →</button>
+            </div>
+            <div className="context-row">
+              <span>Context:</span>
+              <input aria-label="Business context" value={context} onChange={e => setContext(e.target.value)} placeholder="SaaS platform, e-commerce, blog..." />
+            </div>
+            <div className="context-row" style={{ justifyContent: "flex-start", marginTop: 4 }}>
+              <input id="skipAi" type="checkbox" checked={skipAi} onChange={e => setSkipAi(e.target.checked)} style={{ width: 16, height: 16, cursor: "pointer" }} />
+              <label htmlFor="skipAi" style={{ cursor: "pointer", fontSize: 13, color: "var(--text-muted)" }}>Skip AI (mock recommendations — no API tokens used)</label>
+            </div>
+          </div>
+        </div>
+      )}
+      {status === "loading" && (
+        <div className="loading">
+          <div className="loader-ring" />
+          <ul className="loading-steps">
+            {LOADING_STEPS.map((s, i) => <li key={i}><div className={`step-dot ${i<loadStep?"done":i===loadStep?"active":""}`} />{s}</li>)}
+          </ul>
+        </div>
+      )}
+      {status === "error" && (
+        <div className="error-card">
+          <h3>Backend connection failed</h3>
+          <p>{error}</p>
+          <div style={{ marginTop: 16, display: "flex", gap: 10, justifyContent: "center" }}>
+            <button className="reset-btn" onClick={() => { setStatus("idle"); setError(""); }}>← Back</button>
+            <button className="audit-btn" onClick={() => runAudit()}>Retry</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
