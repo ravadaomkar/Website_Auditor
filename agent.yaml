@@ -1,0 +1,25 @@
+name: website-auditor
+version: 1
+
+description: AI website SEO, performance, usability, accessibility, and content auditor.
+
+runtime:
+  language: python
+  working_directory: backend
+  install: pip install -r requirements.txt
+  start: python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+  healthcheck:
+    path: /health
+    method: GET
+
+paths:
+  backend: backend
+  frontend: frontend/index.html
+  environment_file: backend/.env
+
+configuration:
+  required:
+    - OPENAI_API_KEY
+  optional:
+    - OPENAI_API_BASE
+    - OPENAI_MODEL_NAME
